@@ -444,6 +444,8 @@ const App: React.FC = () => {
                 <div>
                   <p className="font-medium text-gray-900">{tx.description}</p>
                   <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                    <span className="font-semibold text-indigo-600">{tx.person}</span>
+                    <span>•</span>
                     <span>{tx.category}</span>
                     <span>•</span>
                     <span className="flex items-center gap-1" title={ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}>
