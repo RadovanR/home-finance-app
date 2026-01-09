@@ -281,13 +281,22 @@ const App: React.FC = () => {
   const handleResetData = async () => {
     const monthName = MONTH_NAMES_SK[currentDate.getMonth()];
     const year = currentDate.getFullYear();
+    const currentMonthStr = format(currentDate, 'yyyy-MM');
 
     if (window.confirm(`Naozaj chcete vymazať všetky dáta pre ${monthName} ${year}? Táto akcia sa nedá vrátiť.`)) {
-      const success = await deleteTransactionsByMonth(currentDate);
-      if (success) {
+      // 1. Delete transactions
+      const deleteTransactionsSuccess = await deleteTransactionsByMonth(currentDate);
+
+      // 2. Reset budget to 0
+      const newBudget: Budget = { amount: 0, month: currentMonthStr };
+      const resetBudgetResult = await upsertBudget(newBudget);
+
+      if (deleteTransactionsSuccess && resetBudgetResult) {
+        // Update local state
         setTransactions(prev => prev.filter(t => !isSameMonth(parseISO(t.date), currentDate)));
+        setBudget(resetBudgetResult);
       } else {
-        alert('Chyba pri mazaní dát.');
+        alert('Nastala chyba pri resetovaní dát (transakcie alebo rozpočet).');
       }
     }
   };
