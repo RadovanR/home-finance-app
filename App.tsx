@@ -447,7 +447,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Expenses Pie Chart */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center min-h-[300px]">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col min-h-[300px]">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 w-full text-left">Rozloženie Výdavkov</h3>
           {categoryData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
@@ -470,7 +470,9 @@ const App: React.FC = () => {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-gray-400">Zatiaľ žiadne výdavky tento mesiac.</p>
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-gray-400">Zatiaľ žiadne výdavky tento mesiac.</p>
+            </div>
           )}
         </div>
       </div>
