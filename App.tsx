@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   LayoutDashboard,
@@ -33,12 +34,20 @@ import { sk } from 'date-fns/locale';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 import { Transaction, Budget, Category, AiPrediction, AccountType } from './types';
-import { INITIAL_TRANSACTIONS, CATEGORY_COLORS, MONTH_NAMES_SK, ACCOUNT_TYPE_LABELS } from './constants';
+import { CATEGORY_COLORS, MONTH_NAMES_SK, ACCOUNT_TYPE_LABELS } from './constants';
 import { TransactionModal } from './components/TransactionModal';
 import { DayDetailModal } from './components/DayDetailModal';
 import { BudgetModal } from './components/BudgetModal';
 import { BalanceModal } from './components/BalanceModal';
 import { getFinancialPrediction } from './services/geminiService';
+import {
+  fetchTransactions,
+  addTransaction,
+  deleteTransaction,
+  fetchBudget,
+  upsertBudget,
+  deleteTransactionsByMonth
+} from './services/transactionService';
 
 // --- Helper Components within App.tsx for Simplicity ---
 
@@ -77,17 +86,11 @@ const getAccountIcon = (type: AccountType) => {
 const App: React.FC = () => {
   // --- State ---
   const [activeTab, setActiveTab] = useState<'dashboard' | 'calendar' | 'history' | 'prediction'>('dashboard');
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('transactions');
-    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
-  });
-  const [budget, setBudget] = useState<Budget>(() => {
-    const saved = localStorage.getItem('budget');
-    return saved ? JSON.parse(saved) : { amount: 2000, month: format(new Date(), 'yyyy-MM') };
-  });
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [budget, setBudget] = useState<Budget>({ amount: 2000, month: format(new Date(), 'yyyy-MM') });
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Modals state
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
@@ -111,13 +114,31 @@ const App: React.FC = () => {
   const [isPredicting, setIsPredicting] = useState(false);
 
   // --- Effects ---
-  useEffect(() => {
-    localStorage.setItem('transactions', JSON.stringify(transactions));
-  }, [transactions]);
 
+  // Load Transactions on Mount
   useEffect(() => {
-    localStorage.setItem('budget', JSON.stringify(budget));
-  }, [budget]);
+    const loadTransactions = async () => {
+      setIsLoading(true);
+      const data = await fetchTransactions();
+      setTransactions(data);
+      setIsLoading(false);
+    };
+    loadTransactions();
+  }, []);
+
+  // Load Budget when Month Changes
+  useEffect(() => {
+    const loadBudget = async () => {
+      const monthStr = format(currentDate, 'yyyy-MM');
+      const loadedBudget = await fetchBudget(monthStr);
+      if (loadedBudget) {
+        setBudget(loadedBudget);
+      } else {
+        setBudget({ amount: 2000, month: monthStr });
+      }
+    };
+    loadBudget();
+  }, [currentDate]);
 
   // --- Derived State ---
   const filteredTransactions = useMemo(() => {
@@ -150,6 +171,7 @@ const App: React.FC = () => {
   }, [filteredTransactions]);
 
   const accountBalances = useMemo(() => {
+    // Calculate balances from ALL transactions to get correct current state
     const balances = {
       bank: 0,
       cash: 0,
@@ -157,7 +179,6 @@ const App: React.FC = () => {
     };
     transactions.forEach(t => {
       const type = t.accountType || 'bank';
-      // Note: t.accountType might be undefined for old records, defaulting to 'bank'
       if (t.type === 'income') {
         balances[type as keyof typeof balances] += t.amount;
       } else {
@@ -219,19 +240,35 @@ const App: React.FC = () => {
   };
 
   // --- Handlers ---
-  const handleAddTransaction = (newTx: Omit<Transaction, 'id'>) => {
-    const tx: Transaction = { ...newTx, id: Date.now().toString() };
-    setTransactions(prev => [...prev, tx]);
-  };
-
-  const handleDeleteTransaction = (id: string) => {
-    if (window.confirm('Naozaj chcete vymazať túto transakciu?')) {
-      setTransactions(prev => prev.filter(t => t.id !== id));
+  const handleAddTransaction = async (newTx: Omit<Transaction, 'id'>) => {
+    const savedTx = await addTransaction(newTx);
+    if (savedTx) {
+      setTransactions(prev => [savedTx, ...prev]);
+    } else {
+      alert('Chyba pri ukladaní transakcie.');
     }
   };
 
-  const handleSaveBudget = (newAmount: number) => {
-    setBudget(prev => ({ ...prev, amount: newAmount }));
+  const handleDeleteTransaction = async (id: string) => {
+    if (window.confirm('Naozaj chcete vymazať túto transakciu?')) {
+      const success = await deleteTransaction(id);
+      if (success) {
+        setTransactions(prev => prev.filter(t => t.id !== id));
+      } else {
+        alert('Chyba pri mazaní transakcie.');
+      }
+    }
+  };
+
+  const handleSaveBudget = async (newAmount: number) => {
+    const monthStr = format(currentDate, 'yyyy-MM');
+    const newBudget: Budget = { amount: newAmount, month: monthStr };
+    const saved = await upsertBudget(newBudget);
+    if (saved) {
+      setBudget(saved);
+    } else {
+      alert('Chyba pri ukladaní rozpočtu.');
+    }
   };
 
   const handlePredict = async () => {
@@ -241,17 +278,30 @@ const App: React.FC = () => {
     setIsPredicting(false);
   };
 
-  const handleResetData = () => {
+  const handleResetData = async () => {
     const monthName = MONTH_NAMES_SK[currentDate.getMonth()];
     const year = currentDate.getFullYear();
 
     if (window.confirm(`Naozaj chcete vymazať všetky dáta pre ${monthName} ${year}? Táto akcia sa nedá vrátiť.`)) {
-      setTransactions(prev => prev.filter(t => !isSameMonth(parseISO(t.date), currentDate)));
+      const success = await deleteTransactionsByMonth(currentDate);
+      if (success) {
+        setTransactions(prev => prev.filter(t => !isSameMonth(parseISO(t.date), currentDate)));
+      } else {
+        alert('Chyba pri mazaní dát.');
+      }
     }
   };
 
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   // --- Render Views ---
 
