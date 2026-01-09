@@ -40,6 +40,7 @@ import { DayDetailModal } from './components/DayDetailModal';
 import { BudgetModal } from './components/BudgetModal';
 import { BalanceModal } from './components/BalanceModal';
 import { getFinancialPrediction } from './services/geminiService';
+import { supabase } from './services/supabaseClient';
 import {
   fetchTransactions,
   addTransaction,
@@ -138,6 +139,51 @@ const App: React.FC = () => {
       }
     };
     loadBudget();
+  }, [currentDate]);
+
+  // Real-time Subscriptions
+  useEffect(() => {
+    // Subscription for Transactions
+    const transactionsSubscription = supabase
+      .channel('transactions_channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions' },
+        async () => {
+          // Reload transactions on any change
+          const data = await fetchTransactions();
+          setTransactions(data);
+        }
+      )
+      .subscribe();
+
+    // Subscription for Budgets
+    const budgetSubscription = supabase
+      .channel('budgets_channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'budgets' },
+        async (payload) => {
+          // Reload budget only if it might affect the current view, 
+          // or just reload current month's budget to be safe.
+          const monthStr = format(currentDate, 'yyyy-MM');
+          // Optimization: Check if the changed budget is for the current month
+          // payload.new or payload.old has the 'month' column ideally.
+          // But simply reloading is safer and fast enough.
+          const loadedBudget = await fetchBudget(monthStr);
+          if (loadedBudget) {
+            setBudget(loadedBudget);
+          } else {
+            setBudget({ amount: 2000, month: monthStr });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(transactionsSubscription);
+      supabase.removeChannel(budgetSubscription);
+    };
   }, [currentDate]);
 
   // --- Derived State ---
