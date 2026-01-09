@@ -333,8 +333,8 @@ const App: React.FC = () => {
       // 1. Delete transactions
       const deleteTransactionsSuccess = await deleteTransactionsByMonth(currentDate);
 
-      // 2. Reset budget to 0
-      const newBudget: Budget = { amount: 0, month: currentMonthStr };
+      // 2. Reset budget to 2000
+      const newBudget: Budget = { amount: 2000, month: currentMonthStr };
       const resetBudgetResult = await upsertBudget(newBudget);
 
       if (deleteTransactionsSuccess && resetBudgetResult) {
