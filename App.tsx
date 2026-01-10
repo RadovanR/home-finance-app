@@ -18,7 +18,8 @@ import {
   Banknote,
   Ticket,
   Pencil,
-  Tag
+  Tag,
+  X
 } from 'lucide-react';
 import {
   format,
@@ -70,10 +71,10 @@ const StatCard: React.FC<{
     onClick={onClick}
   >
     <div>
-      <p className="text-sm text-gray-500 font-medium mb-1">{title}</p>
-      <h3 className="text-2xl font-bold text-gray-900">{amount.toFixed(2)} €</h3>
+      <p className="text-sm text-gray-500 font-medium mb-1 truncate">{title}</p>
+      <h3 className="text-xl sm:text-2xl font-bold text-gray-900 truncate" title={`${amount.toFixed(2)} €`}>{amount.toFixed(2)} €</h3>
     </div>
-    <div className={`p-3 rounded-full ${colorClass}`}>
+    <div className={`p-3 rounded-full ${colorClass} flex-shrink-0`}>
       {icon}
     </div>
   </div>
@@ -81,10 +82,10 @@ const StatCard: React.FC<{
 
 const getAccountIcon = (type: AccountType) => {
   switch (type) {
-    case 'bank': return <CreditCard size={14} className="text-indigo-500" />;
-    case 'cash': return <Banknote size={14} className="text-emerald-500" />;
-    case 'meal_voucher': return <Ticket size={14} className="text-orange-500" />;
-    default: return <CreditCard size={14} className="text-gray-400" />;
+    case 'bank': return <CreditCard size={14} className="text-indigo-500 flex-shrink-0" />;
+    case 'cash': return <Banknote size={14} className="text-emerald-500 flex-shrink-0" />;
+    case 'meal_voucher': return <Ticket size={14} className="text-orange-500 flex-shrink-0" />;
+    default: return <CreditCard size={14} className="text-gray-400 flex-shrink-0" />;
   }
 };
 
@@ -102,6 +103,7 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAppSettingsOpen, setIsAppSettingsOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   // Generic Breakdown Modal State
@@ -696,37 +698,37 @@ const App: React.FC = () => {
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
               .map((tx) => (
                 <div key={tx.id} className="p-4 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center space-x-3 overflow-hidden">
                       <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
                         style={{ backgroundColor: categories.find(c => c.name === tx.category)?.color || CATEGORY_COLORS[tx.category] || '#ccc' }}
                       >
                         {tx.category.charAt(0)}
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{tx.description}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-gray-900 truncate">{tx.description}</p>
                         <div className="flex items-center gap-1 text-xs text-gray-500">
-                          <span>{format(parseISO(tx.date), 'd.M.')}</span>
+                          <span className="truncate">{format(parseISO(tx.date), 'd.M.')}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className={`font-bold block ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <div className="text-right flex-shrink-0">
+                      <span className={`font-bold block text-lg ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)} €
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <span>{tx.category}</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
+                  <div className="flex items-center justify-between text-xs text-gray-500 bg-gray-50 p-2 rounded-lg gap-2">
+                    <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                      <span className="truncate max-w-[80px] sm:max-w-none" title={tx.category}>{tx.category}</span>
+                      <span className="flex-shrink-0">•</span>
+                      <span className="flex items-center gap-1 truncate">
                         {getAccountIcon(tx.accountType || 'bank')}
-                        <span>{ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}</span>
+                        <span className="truncate">{ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}</span>
                       </span>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 flex-shrink-0">
                       <button
                         onClick={() => handleEditTransaction(tx)}
                         className="text-indigo-600 font-medium flex items-center gap-1 hover:text-indigo-800"
@@ -963,8 +965,8 @@ const App: React.FC = () => {
         <button onClick={() => setActiveTab('history')} className={`p-2 rounded-lg ${activeTab === 'history' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500'}`}>
           <History size={24} />
         </button>
-        <button onClick={() => setActiveTab('prediction')} className={`p-2 rounded-lg ${activeTab === 'prediction' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500'}`}>
-          <Sparkles size={24} />
+        <button onClick={() => setIsAppSettingsOpen(true)} className={`p-2 rounded-lg ${isAppSettingsOpen ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500'}`}>
+          <Settings size={24} />
         </button>
       </div>
 
@@ -1040,6 +1042,76 @@ const App: React.FC = () => {
         title={breakdownData.title}
         totalLabel={breakdownData.totalLabel}
       />
+
+      {/* App Settings Menu Modal (Mobile) */}
+      {isAppSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Settings size={20} className="text-gray-600" />
+                Nastavenia
+              </h2>
+              <button onClick={() => setIsAppSettingsOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-2 space-y-1">
+              <button
+                onClick={() => {
+                  setIsAppSettingsOpen(false);
+                  setIsSettingsOpen(true);
+                }}
+                className="w-full flex items-center p-4 rounded-xl hover:bg-gray-50 transition-colors text-left gap-3"
+              >
+                <div className="bg-indigo-100 text-indigo-600 p-2 rounded-lg">
+                  <Tag size={20} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">Správa Kategórií</p>
+                  <p className="text-xs text-gray-500">Pridať, upraviť alebo zmeniť poradie</p>
+                </div>
+                <ChevronRight size={18} className="text-gray-400" />
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsAppSettingsOpen(false);
+                  setActiveTab('prediction');
+                }}
+                className="w-full flex items-center p-4 rounded-xl hover:bg-gray-50 transition-colors text-left gap-3"
+              >
+                <div className="bg-purple-100 text-purple-600 p-2 rounded-lg">
+                  <Sparkles size={20} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">AI Predikcia</p>
+                  <p className="text-xs text-gray-500">Analýza a odhad výdavkov</p>
+                </div>
+                <ChevronRight size={18} className="text-gray-400" />
+              </button>
+
+              <div className="my-2 border-t border-gray-100"></div>
+
+              <button
+                onClick={() => {
+                  setIsAppSettingsOpen(false);
+                  handleResetData();
+                }}
+                className="w-full flex items-center p-4 rounded-xl hover:bg-rose-50 transition-colors text-left gap-3 group"
+              >
+                <div className="bg-rose-100 text-rose-600 p-2 rounded-lg group-hover:bg-rose-200 transition-colors">
+                  <Trash2 size={20} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900 group-hover:text-rose-700">Resetovať dáta</p>
+                  <p className="text-xs text-gray-500 group-hover:text-rose-600">Vymazať transakcie pre tento mesiac</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
