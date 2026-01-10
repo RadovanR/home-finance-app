@@ -905,7 +905,7 @@ const App: React.FC = () => {
                       </td>
                       <td className="p-4 text-sm text-gray-700">{tx.description}</td>
                       <td className={`p-4 text-sm font-bold text-right ${tx.type === 'income' ? 'text-emerald-600' :
-                          tx.type === 'carryover' ? 'text-indigo-600' : 'text-rose-600'
+                        tx.type === 'carryover' ? 'text-indigo-600' : 'text-rose-600'
                         }`}>
                         {tx.type === 'income' || tx.type === 'carryover' ? '+' : '-'}{tx.amount.toFixed(2)} €
                       </td>
@@ -996,9 +996,9 @@ const App: React.FC = () => {
       <aside className="w-20 lg:w-64 bg-white border-r border-gray-200 hidden md:flex flex-col fixed h-full z-10">
         <div className="h-16 flex items-center justify-center lg:justify-start lg:px-6 border-b border-gray-100">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
-            F
+            D
           </div>
-          <span className="ml-3 font-bold text-gray-800 hidden lg:block">Financie</span>
+          <span className="ml-3 font-bold text-gray-800 hidden lg:block">Dashboard</span>
         </div>
 
         <nav className="flex-1 py-6 space-y-2 px-2 lg:px-4">
@@ -1088,8 +1088,8 @@ const App: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           {/* Header Mobile - Just Title */}
           <div className="md:hidden mb-6 flex justify-between items-center">
-            <h1 className="text-xl font-bold text-gray-900">Domáce Financie</h1>
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">F</div>
+            <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">D</div>
           </div>
 
           {activeTab === 'dashboard' && <div className="animate-fade-in w-full overflow-hidden sm:overflow-visible">{renderDashboard()}</div>}
