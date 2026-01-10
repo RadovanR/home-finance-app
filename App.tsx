@@ -67,7 +67,7 @@ const StatCard: React.FC<{
   isClickable?: boolean;
 }> = ({ title, amount, icon, colorClass, onClick, isClickable }) => (
   <div
-    className={`bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between ${isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+    className={`bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between ${isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
     onClick={onClick}
   >
     <div>
@@ -436,7 +436,7 @@ const App: React.FC = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         <div className="cursor-pointer" onClick={() => openBreakdown('income')}>
           <StatCard
             title="Celkové Príjmy"
@@ -467,9 +467,9 @@ const App: React.FC = () => {
       </div>
 
       {/* Budget & Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Budget Progress */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-800">Mesačný Rozpočet</h3>
             <button
@@ -505,29 +505,31 @@ const App: React.FC = () => {
         </div>
 
         {/* Expenses Pie Chart */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col min-h-[300px]">
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col min-h-[300px]">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 w-full text-left">Rozloženie Výdavkov</h3>
           {categoryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {categoryData.map((entry, index) => {
-                    const cat = categories.find(c => c.name === entry.name);
-                    return <Cell key={`cell-${index}`} fill={cat?.color || CATEGORY_COLORS[entry.name] || '#ccc'} />;
-                  })}
-                </Pie>
-                <RechartsTooltip formatter={(value: number) => `${value.toFixed(2)} €`} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="flex-1 min-w-0">
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {categoryData.map((entry, index) => {
+                      const cat = categories.find(c => c.name === entry.name);
+                      return <Cell key={`cell-${index}`} fill={cat?.color || CATEGORY_COLORS[entry.name] || '#ccc'} />;
+                    })}
+                  </Pie>
+                  <RechartsTooltip formatter={(value: number) => `${value.toFixed(2)} €`} />
+                  <Legend wrapperStyle={{ fontSize: '10px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-gray-400">Zatiaľ žiadne výdavky tento mesiac.</p>
@@ -538,7 +540,7 @@ const App: React.FC = () => {
 
       {/* Recent Transactions List (Brief) */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+        <div className="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center">
           <h3 className="text-lg font-semibold text-gray-800">Posledné Transakcie</h3>
           <button
             onClick={() => setActiveTab('history')}
@@ -549,46 +551,48 @@ const App: React.FC = () => {
         </div>
         <div className="divide-y divide-gray-100">
           {filteredTransactions.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5).map((tx) => (
-            <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-              <div className="flex items-center space-x-4">
+            <div key={tx.id} className="p-3 sm:p-4 flex items-center justify-between hover:bg-gray-50 transition-colors gap-3">
+              <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
                   style={{ backgroundColor: categories.find(c => c.name === tx.category)?.color || CATEGORY_COLORS[tx.category] || '#ccc' }}
                 >
                   {tx.category.charAt(0)}
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900">{tx.description}</p>
-                  <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                    <span>{tx.category}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1" title={ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-gray-900 truncate">{tx.description}</p>
+                  <div className="flex items-center gap-1 sm:gap-2 text-xs text-gray-500 mt-1 min-w-0">
+                    <span className="truncate">{tx.category}</span>
+                    <span className="flex-shrink-0">•</span>
+                    <span className="flex items-center gap-1 flex-shrink-0" title={ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}>
                       {getAccountIcon(tx.accountType || 'bank')}
-                      <span className="hidden sm:inline">{ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}</span>
+                      <span className="hidden sm:inline truncate">{ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}</span>
                     </span>
-                    <span>•</span>
-                    <span>{format(parseISO(tx.date), 'd. MMMM', { locale: sk })}</span>
+                    <span className="flex-shrink-0">•</span>
+                    <span className="truncate flex-shrink-0">{format(parseISO(tx.date), 'd. MMM', { locale: sk })}</span>
                   </div>
                 </div>
               </div>
-              <span className={`font-bold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)} €
-              </span>
-              <div className="flex pl-4">
-                <button
-                  onClick={() => handleEditTransaction(tx)}
-                  className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
-                  title="Upraviť"
-                >
-                  <Pencil size={18} />
-                </button>
-                <button
-                  onClick={() => handleDeleteTransaction(tx.id)}
-                  className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors"
-                  title="Vymazať"
-                >
-                  <Trash2 size={18} />
-                </button>
+              <div className="flex items-center gap-2 sm:gap-4 ml-auto flex-shrink-0">
+                <span className={`font-bold text-right whitespace-nowrap ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)} €
+                </span>
+                <div className="flex">
+                  <button
+                    onClick={() => handleEditTransaction(tx)}
+                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
+                    title="Upraviť"
+                  >
+                    <Pencil size={18} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTransaction(tx.id)}
+                    className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors"
+                    title="Vymazať"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -971,8 +975,8 @@ const App: React.FC = () => {
         <button onClick={() => setActiveTab('calendar')} className={`p-2 rounded-lg ${activeTab === 'calendar' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500'}`}>
           <CalendarIcon size={24} />
         </button>
-        <button onClick={() => setIsModalOpen(true)} className="p-3 -mt-8 bg-indigo-600 text-white rounded-full shadow-lg">
-          <Plus size={24} />
+        <button onClick={() => setIsModalOpen(true)} className="w-14 h-14 -mt-8 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center">
+          <Plus size={28} />
         </button>
         <button onClick={() => setActiveTab('history')} className={`p-2 rounded-lg ${activeTab === 'history' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500'}`}>
           <History size={24} />
@@ -983,7 +987,7 @@ const App: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-20 lg:ml-64 p-4 lg:p-8 pb-24 md:pb-8">
+      <main className="flex-1 md:ml-20 lg:ml-64 p-4 lg:p-8 pb-24 md:pb-8 overflow-x-hidden w-full">
         <div className="max-w-7xl mx-auto">
           {/* Header Mobile - Just Title */}
           <div className="md:hidden mb-6 flex justify-between items-center">
@@ -991,10 +995,10 @@ const App: React.FC = () => {
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">F</div>
           </div>
 
-          {activeTab === 'dashboard' && renderDashboard()}
-          {activeTab === 'calendar' && renderCalendar()}
-          {activeTab === 'history' && renderHistory()}
-          {activeTab === 'prediction' && renderPrediction()}
+          {activeTab === 'dashboard' && <div className="animate-fade-in w-full overflow-hidden sm:overflow-visible">{renderDashboard()}</div>}
+          {activeTab === 'calendar' && <div className="animate-fade-in w-full overflow-hidden sm:overflow-visible">{renderCalendar()}</div>}
+          {activeTab === 'history' && <div className="animate-fade-in w-full overflow-hidden sm:overflow-visible">{renderHistory()}</div>}
+          {activeTab === 'prediction' && <div className="animate-fade-in w-full overflow-hidden sm:overflow-visible">{renderPrediction()}</div>}
         </div>
       </main>
 
@@ -1004,10 +1008,12 @@ const App: React.FC = () => {
           setEditingTransaction(null);
           setIsModalOpen(true);
         }}
-        className="hidden md:flex fixed bottom-8 right-8 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg transition-transform hover:scale-105 items-center gap-2 group z-30"
+        className="hidden md:flex fixed bottom-8 right-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg transition-colors duration-300 items-center justify-start group z-30 h-16"
       >
-        <Plus size={24} />
-        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 font-medium whitespace-nowrap">
+        <div className="w-16 h-16 flex items-center justify-center flex-shrink-0">
+          <Plus size={28} />
+        </div>
+        <span className="max-w-0 opacity-0 group-hover:max-w-[12rem] group-hover:opacity-100 group-hover:pr-6 transition-all duration-500 ease-in-out overflow-hidden whitespace-nowrap font-medium">
           Nová transakcia
         </span>
       </button>
