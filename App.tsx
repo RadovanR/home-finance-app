@@ -281,14 +281,27 @@ const App: React.FC = () => {
     };
     transactions.forEach(t => {
       const type = t.accountType || 'bank';
-      if (t.type === 'income' || t.type === 'carryover') {
+      if (t.type === 'income') {
         balances[type as keyof typeof balances] += t.amount;
       } else {
-        balances[type as keyof typeof balances] -= t.amount;
+        if (t.type !== 'carryover') {
+          balances[type as keyof typeof balances] -= t.amount;
+        }
       }
     });
     return balances;
   }, [transactions]);
+
+  const historicalBalance = useMemo(() => {
+    const endOfCurrentMonthStr = format(endOfMonth(currentDate), 'yyyy-MM-dd');
+
+    return transactions
+      .filter(t => t.date <= endOfCurrentMonthStr)
+      .reduce((acc, t) => {
+        if (t.type === 'carryover') return acc; // Ignore carryover in physical balance
+        return t.type === 'income' ? acc + t.amount : acc - t.amount;
+      }, 0);
+  }, [transactions, currentDate]);
 
   const totalBalance = useMemo(() => {
     return (Object.values(accountBalances) as number[]).reduce((acc, val) => acc + val, 0);
@@ -567,8 +580,8 @@ const App: React.FC = () => {
         </div>
         <div className="cursor-pointer" onClick={() => openBreakdown('balance')}>
           <StatCard
-            title="Aktuálny Zostatok"
-            amount={totalBalance}
+            title="Zostatok na konci mesiaca"
+            amount={filteredTransactions.length > 0 ? historicalBalance : 0}
             icon={<Wallet className="text-indigo-600" />}
             colorClass="bg-indigo-100 hover:bg-indigo-200 transition-colors"
             isClickable={true}
