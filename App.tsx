@@ -17,7 +17,8 @@ import {
   CreditCard,
   Banknote,
   Ticket,
-  Pencil
+  Pencil,
+  Tag
 } from 'lucide-react';
 import {
   format,
@@ -34,9 +35,10 @@ import {
 import { sk } from 'date-fns/locale';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
-import { Transaction, Budget, Category, AiPrediction, AccountType } from './types';
+import { Transaction, Budget, Category, AiPrediction, AccountType, CategoryItem } from './types';
 import { CATEGORY_COLORS, MONTH_NAMES_SK, ACCOUNT_TYPE_LABELS } from './constants';
 import { TransactionModal } from './components/TransactionModal';
+import { SettingsModal } from './components/SettingsModal';
 import { DayDetailModal } from './components/DayDetailModal';
 import { BudgetModal } from './components/BudgetModal';
 import { BalanceModal } from './components/BalanceModal';
@@ -51,6 +53,7 @@ import {
   deleteTransactionsByMonth,
   updateTransaction
 } from './services/transactionService';
+import { fetchCategories } from './services/categoryService';
 
 // --- Helper Components within App.tsx for Simplicity ---
 
@@ -90,6 +93,7 @@ const App: React.FC = () => {
   // --- State ---
   const [activeTab, setActiveTab] = useState<'dashboard' | 'calendar' | 'history' | 'prediction'>('dashboard');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [budget, setBudget] = useState<Budget>({ amount: 2000, month: format(new Date(), 'yyyy-MM') });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(true);
@@ -97,6 +101,7 @@ const App: React.FC = () => {
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   // Generic Breakdown Modal State
@@ -128,6 +133,15 @@ const App: React.FC = () => {
       setIsLoading(false);
     };
     loadTransactions();
+  }, []);
+
+  // Load Categories on Mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      const data = await fetchCategories();
+      setCategories(data);
+    };
+    loadCategories();
   }, []);
 
   // Load Budget when Month Changes
@@ -491,9 +505,10 @@ const App: React.FC = () => {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || '#ccc'} />
-                  ))}
+                  {categoryData.map((entry, index) => {
+                    const cat = categories.find(c => c.name === entry.name);
+                    return <Cell key={`cell-${index}`} fill={cat?.color || CATEGORY_COLORS[entry.name] || '#ccc'} />;
+                  })}
                 </Pie>
                 <RechartsTooltip formatter={(value: number) => `${value.toFixed(2)} €`} />
                 <Legend />
@@ -524,15 +539,13 @@ const App: React.FC = () => {
               <div className="flex items-center space-x-4">
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                  style={{ backgroundColor: CATEGORY_COLORS[tx.category] || '#ccc' }}
+                  style={{ backgroundColor: categories.find(c => c.name === tx.category)?.color || CATEGORY_COLORS[tx.category] || '#ccc' }}
                 >
                   {tx.category.charAt(0)}
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">{tx.description}</p>
                   <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                    <span className="font-semibold text-indigo-600">{tx.person}</span>
-                    <span>•</span>
                     <span>{tx.category}</span>
                     <span>•</span>
                     <span className="flex items-center gap-1" title={ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}>
@@ -687,15 +700,13 @@ const App: React.FC = () => {
                     <div className="flex items-center space-x-3">
                       <div
                         className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                        style={{ backgroundColor: CATEGORY_COLORS[tx.category] || '#ccc' }}
+                        style={{ backgroundColor: categories.find(c => c.name === tx.category)?.color || CATEGORY_COLORS[tx.category] || '#ccc' }}
                       >
                         {tx.category.charAt(0)}
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">{tx.description}</p>
                         <div className="flex items-center gap-1 text-xs text-gray-500">
-                          <span className="font-semibold text-indigo-600">{tx.person}</span>
-                          <span>•</span>
                           <span>{format(parseISO(tx.date), 'd.M.')}</span>
                         </div>
                       </div>
@@ -741,7 +752,6 @@ const App: React.FC = () => {
             <thead>
               <tr className="bg-gray-50 text-gray-600 text-sm border-b border-gray-100">
                 <th className="p-4 font-semibold">Dátum</th>
-                <th className="p-4 font-semibold">Osoba</th>
                 <th className="p-4 font-semibold">Kategória</th>
                 <th className="p-4 font-semibold">Účet</th>
                 <th className="p-4 font-semibold">Popis</th>
@@ -752,7 +762,7 @@ const App: React.FC = () => {
             <tbody className="divide-y divide-gray-100">
               {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-gray-500">Žiadne dáta pre tento mesiac.</td>
+                  <td colSpan={6} className="p-8 text-center text-gray-500">Žiadne dáta pre tento mesiac.</td>
                 </tr>
               ) : (
                 filteredTransactions
@@ -761,11 +771,10 @@ const App: React.FC = () => {
                   .map((tx) => (
                     <tr key={tx.id} className="hover:bg-gray-50">
                       <td className="p-4 text-sm text-gray-600">{format(parseISO(tx.date), 'd.M.yyyy')}</td>
-                      <td className="p-4 text-sm text-gray-900 font-medium">{tx.person}</td>
                       <td className="p-4">
                         <span
                           className="px-2 py-1 rounded-full text-xs font-medium text-white"
-                          style={{ backgroundColor: CATEGORY_COLORS[tx.category] || '#999' }}
+                          style={{ backgroundColor: categories.find(c => c.name === tx.category)?.color || CATEGORY_COLORS[tx.category] || '#999' }}
                         >
                           {tx.category}
                         </span>
@@ -909,6 +918,14 @@ const App: React.FC = () => {
             <Sparkles size={20} />
             <span className="ml-3 font-medium hidden lg:block">AI Predikcia</span>
           </button>
+
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="w-full flex items-center p-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50"
+          >
+            <Tag size={20} />
+            <span className="ml-3 font-medium hidden lg:block">Správa Kategórií</span>
+          </button>
         </nav>
 
         <div className="p-4 border-t border-gray-100 space-y-4">
@@ -989,6 +1006,7 @@ const App: React.FC = () => {
         }}
         onSave={handleSaveTransaction}
         initialData={editingTransaction}
+        categories={categories}
       />
 
       <DayDetailModal
@@ -1003,6 +1021,16 @@ const App: React.FC = () => {
         onClose={() => setIsBudgetModalOpen(false)}
         currentAmount={budget.amount}
         onSave={handleSaveBudget}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        categories={categories}
+        onUpdateCategories={async () => {
+          const data = await fetchCategories();
+          setCategories(data);
+        }}
       />
 
       <BalanceModal

@@ -12,7 +12,6 @@ const mapTransactionFromDB = (data: any): Transaction => ({
     category: data.category as Category,
     accountType: (data.account_type || 'bank') as AccountType,
     description: data.description || '',
-    person: data.person || 'Osoba 1',
 });
 
 // Map Transaction object to DB row (for insert)
@@ -23,7 +22,6 @@ const mapTransactionToDB = (tx: Omit<Transaction, 'id'>) => ({
     category: tx.category,
     account_type: tx.accountType,
     description: tx.description,
-    person: tx.person,
 });
 
 export const fetchTransactions = async (): Promise<Transaction[]> => {

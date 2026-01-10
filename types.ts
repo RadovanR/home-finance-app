@@ -33,7 +33,6 @@ export interface Transaction {
   category: Category | string;
   accountType: AccountType;
   description: string;
-  person: string; // e.g., "Osoba 1", "Osoba 2"
 }
 
 export interface Budget {
@@ -45,4 +44,12 @@ export interface AiPrediction {
   predictedTotal: number;
   reasoning: string;
   tips: string[];
+}
+
+export interface CategoryItem {
+  id: string;
+  name: string;
+  type: 'income' | 'expense';
+  color: string;
+  order?: number;
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { Transaction, TransactionType, Category, AccountType } from '../types';
+import { Transaction, TransactionType, Category, AccountType, CategoryItem } from '../types';
 import { ACCOUNT_TYPE_LABELS, MEAL_VOUCHER_VALUE } from '../constants';
 
 interface TransactionModalProps {
@@ -8,16 +8,16 @@ interface TransactionModalProps {
   onClose: () => void;
   onSave: (transaction: Omit<Transaction, 'id'>) => void;
   initialData?: Transaction | null;
+  categories: CategoryItem[];
 }
 
-export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, onSave, initialData, categories }) => {
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [voucherCount, setVoucherCount] = useState('');
-  const [category, setCategory] = useState<string>(Category.FOOD);
+  const [category, setCategory] = useState<string>('');
   const [accountType, setAccountType] = useState<AccountType>('bank');
   const [description, setDescription] = useState('');
-  const [person, setPerson] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
   React.useEffect(() => {
@@ -28,7 +28,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
         setCategory(initialData.category);
         setAccountType(initialData.accountType);
         setDescription(initialData.description);
-        setPerson(initialData.person);
         setDate(initialData.date);
         setVoucherCount(''); // Reset unless we calculate it back, but usually simple amount is enough
       } else {
@@ -36,14 +35,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
         setType('expense');
         setAmount('');
         setVoucherCount('');
-        setCategory(Category.FOOD);
+        // Set default category for expense
+        const defaultCat = categories.find(c => c.type === 'expense');
+        setCategory(defaultCat ? defaultCat.name : '');
         setAccountType('bank');
         setDescription('');
-        setPerson('');
         setDate(new Date().toISOString().split('T')[0]);
       }
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, categories]);
 
   if (!isOpen) return null;
 
@@ -53,10 +53,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
       date,
       type,
       amount: parseFloat(amount),
-      category: type === 'income' ? Category.SALARY : category,
+      category: category,
       accountType,
-      description,
-      person: person || 'Rodina'
+      description
     });
     // Reset and close
     setAmount('');
@@ -83,7 +82,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
               type="button"
               onClick={() => {
                 setType('income');
-                setCategory(Category.SALARY);
+                const defaultCat = categories.find(c => c.type === 'income');
+                setCategory(defaultCat ? defaultCat.name : '');
               }}
               className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${type === 'income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                 }`}
@@ -94,7 +94,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
               type="button"
               onClick={() => {
                 setType('expense');
-                setCategory(Category.FOOD);
+                const defaultCat = categories.find(c => c.type === 'expense');
+                setCategory(defaultCat ? defaultCat.name : '');
               }}
               className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                 }`}
@@ -161,27 +162,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Dátum</label>
-              <input
-                type="date"
-                required
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Osoba</label>
-              <input
-                type="text"
-                value={person}
-                onChange={(e) => setPerson(e.target.value)}
-                placeholder="Napr. Peter"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dátum</label>
+            <input
+              type="date"
+              required
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
           </div>
 
 
@@ -194,16 +183,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
               onChange={(e) => setCategory(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
             >
-              {Object.values(Category)
-                .filter(cat => {
-                  if (type === 'income') {
-                    return [Category.SALARY, Category.GIFTS, Category.OTHER].includes(cat);
-                  } else {
-                    return cat !== Category.SALARY;
-                  }
-                })
+              <option value="" disabled>Vyberte kategóriu</option>
+              {categories
+                .filter(cat => cat.type === type)
                 .map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat.id} value={cat.name}>{cat.name}</option>
                 ))}
             </select>
           </div>
