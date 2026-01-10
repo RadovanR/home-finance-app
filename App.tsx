@@ -39,6 +39,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, L
 import { Transaction, Budget, Category, AiPrediction, AccountType, CategoryItem } from './types';
 import { CATEGORY_COLORS, MONTH_NAMES_SK, ACCOUNT_TYPE_LABELS } from './constants';
 import { TransactionModal } from './components/TransactionModal';
+import { TransactionDetailModal } from './components/TransactionDetailModal';
 import { SettingsModal } from './components/SettingsModal';
 import { DayDetailModal } from './components/DayDetailModal';
 import { BudgetModal } from './components/BudgetModal';
@@ -106,6 +107,7 @@ const App: React.FC = () => {
   const [isAppSettingsOpen, setIsAppSettingsOpen] = useState(false);
   const [isAppSettingsClosing, setIsAppSettingsClosing] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
 
   // Generic Breakdown Modal State
   const [breakdownData, setBreakdownData] = useState<{
@@ -343,13 +345,33 @@ const App: React.FC = () => {
   };
 
   const handleDeleteTransaction = async (id: string) => {
+    // If confirm logic is moved to modal, we just execute delete here
+    // But existing handleDeleteTransaction has window.confirm.
+    // The DetailModal also has confirm.
+    // We can allow direct delete call if user confirmed in modal.
+    // Let's refactor handleDeleteTransaction to optionally skip confirm if we know it's already confirmed?
+    // Or just let the modal handle confirm and call a raw delete function?
+    // BUT handleDeleteTransaction updates state.
+    // Let's keep it as is, but if the Modal asks for confirm, it calls this, which asks again? No.
+    // The Modal calls `onDelete`. 
+    // Let's make a version that doesn't confirm, or assume the modal handles it.
+    // Actually, simple way: The modal calls `handleDeleteTransaction`. `handleDeleteTransaction` shows confirm. 
+    // If the modal ALREADY showed confirm, we don't want double confirm.
+    // User requested "in detail... edit or delete".
+    // I will implement `confirm` INSIDE the modal (as I did in TransactionDetailModal).
+    // So `onDelete` prop passed to modal should just do the deletion.
+    const success = await deleteTransaction(id);
+    if (success) {
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      setDetailTransaction(null); // Close detail if open
+    } else {
+      alert('Chyba pri mazaní transakcie.');
+    }
+  };
+
+  const handleDeleteWithConfirm = async (id: string) => {
     if (window.confirm('Naozaj chcete vymazať túto transakciu?')) {
-      const success = await deleteTransaction(id);
-      if (success) {
-        setTransactions(prev => prev.filter(t => t.id !== id));
-      } else {
-        alert('Chyba pri mazaní transakcie.');
-      }
+      await handleDeleteTransaction(id);
     }
   };
 
@@ -551,7 +573,11 @@ const App: React.FC = () => {
         </div>
         <div className="divide-y divide-gray-100">
           {filteredTransactions.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5).map((tx) => (
-            <div key={tx.id} className="p-3 sm:p-4 flex items-center justify-between hover:bg-gray-50 transition-colors gap-3">
+            <div
+              key={tx.id}
+              onClick={() => setDetailTransaction(tx)}
+              className="p-3 sm:p-4 flex items-center justify-between hover:bg-gray-50 transition-colors gap-3 cursor-pointer active:bg-gray-100"
+            >
               <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
@@ -577,22 +603,7 @@ const App: React.FC = () => {
                 <span className={`font-bold text-right whitespace-nowrap ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)} €
                 </span>
-                <div className="flex">
-                  <button
-                    onClick={() => handleEditTransaction(tx)}
-                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
-                    title="Upraviť"
-                  >
-                    <Pencil size={18} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTransaction(tx.id)}
-                    className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors"
-                    title="Vymazať"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
+                <ChevronRight size={18} className="text-gray-300" />
               </div>
             </div>
           ))}
@@ -713,7 +724,11 @@ const App: React.FC = () => {
               .slice()
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
               .map((tx) => (
-                <div key={tx.id} className="p-4 flex flex-col gap-3">
+                <div
+                  key={tx.id}
+                  onClick={() => setDetailTransaction(tx)}
+                  className="p-4 flex flex-col gap-3 cursor-pointer active:bg-gray-50 transition-colors"
+                >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center space-x-3 overflow-hidden">
                       <div
@@ -743,20 +758,6 @@ const App: React.FC = () => {
                         {getAccountIcon(tx.accountType || 'bank')}
                         <span className="truncate">{ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}</span>
                       </span>
-                    </div>
-                    <div className="flex gap-3 flex-shrink-0">
-                      <button
-                        onClick={() => handleEditTransaction(tx)}
-                        className="text-indigo-600 font-medium flex items-center gap-1 hover:text-indigo-800"
-                      >
-                        <Pencil size={14} /> Upraviť
-                      </button>
-                      <button
-                        onClick={() => handleDeleteTransaction(tx.id)}
-                        className="text-red-500 font-medium flex items-center gap-1 hover:text-red-700"
-                      >
-                        <Trash2 size={14} /> Vymazať
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -810,18 +811,13 @@ const App: React.FC = () => {
                       <td className="p-4 text-center">
                         <div className="flex justify-center gap-2">
                           <button
-                            onClick={() => handleEditTransaction(tx)}
+                            onClick={() => setDetailTransaction(tx)}
                             className="text-gray-400 hover:text-indigo-600 transition-colors"
-                            title="Upraviť"
+                            title="Detail"
                           >
-                            <Pencil size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTransaction(tx.id)}
-                            className="text-gray-400 hover:text-red-500 transition-colors"
-                            title="Vymazať"
-                          >
-                            <Trash2 size={16} />
+                            <div className="p-2 hover:bg-indigo-50 rounded-full">
+                              <ChevronRight size={16} />
+                            </div>
                           </button>
                         </div>
                       </td>
@@ -1026,6 +1022,18 @@ const App: React.FC = () => {
         }}
         onSave={handleSaveTransaction}
         initialData={editingTransaction}
+        categories={categories}
+      />
+
+      <TransactionDetailModal
+        isOpen={!!detailTransaction}
+        onClose={() => setDetailTransaction(null)}
+        transaction={detailTransaction}
+        onEdit={(tx) => {
+          setEditingTransaction(tx);
+          setIsModalOpen(true);
+        }}
+        onDelete={handleDeleteTransaction}
         categories={categories}
       />
 
