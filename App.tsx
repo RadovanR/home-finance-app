@@ -21,6 +21,7 @@ import {
   Tag,
   X
 } from 'lucide-react';
+import { TransactionHistory } from './components/TransactionHistory';
 import {
   format,
   startOfMonth,
@@ -824,124 +825,11 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Mobile View: Cards */}
-        <div className="block md:hidden divide-y divide-gray-100">
-          {filteredTransactions.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">Žiadne dáta pre tento mesiac.</div>
-          ) : (
-            filteredTransactions
-              .slice()
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-              .map((tx) => (
-                <div
-                  key={tx.id}
-                  onClick={() => setDetailTransaction(tx)}
-                  className="p-4 flex flex-col gap-3 cursor-pointer active:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center space-x-3 overflow-hidden">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
-                        style={{ backgroundColor: categories.find(c => c.name === tx.category)?.color || CATEGORY_COLORS[tx.category] || '#ccc' }}
-                      >
-                        {tx.category.charAt(0)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-900 truncate">{tx.description}</p>
-                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                          <span className="truncate">{format(parseISO(tx.date), 'd.M.')}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <span className={`font-bold block text-lg ${tx.type === 'income' ? 'text-emerald-600' :
-                        tx.type === 'carryover' ? 'text-indigo-600' : 'text-rose-600'
-                        }`}>
-                        {tx.type === 'income' || tx.type === 'carryover' ? '+' : '-'}{tx.amount.toFixed(2)} €
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-gray-500 bg-gray-50 p-2 rounded-lg gap-2">
-                    <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                      <span className="truncate max-w-[80px] sm:max-w-none" title={tx.category}>{tx.category}</span>
-                      <span className="flex-shrink-0">•</span>
-                      <span className="flex items-center gap-1 truncate">
-                        {getAccountIcon(tx.accountType || 'bank')}
-                        <span className="truncate">{ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))
-          )}
-        </div>
-
-        {/* Desktop View: Table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-gray-50 text-gray-600 text-sm border-b border-gray-100">
-                <th className="p-4 font-semibold">Dátum</th>
-                <th className="p-4 font-semibold">Kategória</th>
-                <th className="p-4 font-semibold">Účet</th>
-                <th className="p-4 font-semibold">Popis</th>
-                <th className="p-4 font-semibold text-right">Suma</th>
-                <th className="p-4 font-semibold text-center">Akcia</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500">Žiadne dáta pre tento mesiac.</td>
-                </tr>
-              ) : (
-                filteredTransactions
-                  .slice()
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .map((tx) => (
-                    <tr key={tx.id} className="hover:bg-gray-50">
-                      <td className="p-4 text-sm text-gray-600">{format(parseISO(tx.date), 'd.M.yyyy')}</td>
-                      <td className="p-4">
-                        <span
-                          className="px-2 py-1 rounded-full text-xs font-medium text-white"
-                          style={{ backgroundColor: categories.find(c => c.name === tx.category)?.color || CATEGORY_COLORS[tx.category] || '#999' }}
-                        >
-                          {tx.category}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          {getAccountIcon(tx.accountType || 'bank')}
-                          <span>{ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}</span>
-                        </div>
-                      </td>
-                      <td className="p-4 text-sm text-gray-700">{tx.description}</td>
-                      <td className={`p-4 text-sm font-bold text-right ${tx.type === 'income' ? 'text-emerald-600' :
-                        tx.type === 'carryover' ? 'text-indigo-600' : 'text-rose-600'
-                        }`}>
-                        {tx.type === 'income' || tx.type === 'carryover' ? '+' : '-'}{tx.amount.toFixed(2)} €
-                      </td>
-                      <td className="p-4 text-center">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => setDetailTransaction(tx)}
-                            className="text-gray-400 hover:text-indigo-600 transition-colors"
-                            title="Detail"
-                          >
-                            <div className="p-2 hover:bg-indigo-50 rounded-full">
-                              <ChevronRight size={16} />
-                            </div>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <TransactionHistory
+        transactions={filteredTransactions}
+        categories={categories}
+        onTransactionClick={setDetailTransaction}
+      />
     </div>
   );
 
