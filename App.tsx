@@ -129,6 +129,36 @@ const App: React.FC = () => {
 
   // --- Effects ---
 
+  // Centralized Scroll Locking
+  useEffect(() => {
+    const isAnyModalOpen =
+      isModalOpen ||
+      isBudgetModalOpen ||
+      isSettingsOpen ||
+      isAppSettingsOpen ||
+      !!detailTransaction ||
+      breakdownData.isOpen ||
+      !!selectedDate;
+
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [
+    isModalOpen,
+    isBudgetModalOpen,
+    isSettingsOpen,
+    isAppSettingsOpen,
+    detailTransaction,
+    breakdownData.isOpen,
+    selectedDate
+  ]);
+
   // Load Transactions on Mount
   useEffect(() => {
     const loadTransactions = async () => {

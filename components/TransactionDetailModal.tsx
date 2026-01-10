@@ -22,17 +22,6 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   onDelete,
   categories
 }) => {
-  React.useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
-
   if (!isOpen || !transaction) return null;
 
   const categoryColor = categories.find(c => c.name === transaction.category)?.color || CATEGORY_COLORS[transaction.category] || '#ccc';
