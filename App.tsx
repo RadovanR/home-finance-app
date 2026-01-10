@@ -282,12 +282,10 @@ const App: React.FC = () => {
     };
     transactions.forEach(t => {
       const type = t.accountType || 'bank';
-      if (t.type === 'income') {
+      if (t.type === 'income' || t.type === 'carryover') {
         balances[type as keyof typeof balances] += t.amount;
       } else {
-        if (t.type !== 'carryover') {
-          balances[type as keyof typeof balances] -= t.amount;
-        }
+        balances[type as keyof typeof balances] -= t.amount;
       }
     });
     return balances;
@@ -299,8 +297,8 @@ const App: React.FC = () => {
     return transactions
       .filter(t => t.date <= endOfCurrentMonthStr)
       .reduce((acc, t) => {
-        if (t.type === 'carryover') return acc; // Ignore carryover in physical balance
-        return t.type === 'income' ? acc + t.amount : acc - t.amount;
+        if (t.type === 'income' || t.type === 'carryover') return acc + t.amount;
+        return acc - t.amount;
       }, 0);
   }, [transactions, currentDate]);
 
@@ -582,7 +580,7 @@ const App: React.FC = () => {
         <div className="cursor-pointer" onClick={() => openBreakdown('balance')}>
           <StatCard
             title="Aktuálny zostatok na účte"
-            amount={filteredTransactions.length > 0 ? historicalBalance : 0}
+            amount={historicalBalance}
             icon={<Wallet className="text-indigo-600" />}
             colorClass="bg-indigo-100 hover:bg-indigo-200 transition-colors"
             isClickable={true}
