@@ -627,7 +627,62 @@ const App: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile View: Cards */}
+        <div className="block md:hidden divide-y divide-gray-100">
+          {filteredTransactions.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">Žiadne dáta pre tento mesiac.</div>
+          ) : (
+            filteredTransactions
+              .slice()
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .map((tx) => (
+                <div key={tx.id} className="p-4 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                        style={{ backgroundColor: CATEGORY_COLORS[tx.category] || '#ccc' }}
+                      >
+                        {tx.category.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{tx.description}</p>
+                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <span className="font-semibold text-indigo-600">{tx.person}</span>
+                          <span>•</span>
+                          <span>{format(parseISO(tx.date), 'd.M.')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-bold block ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)} €
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span>{tx.category}</span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        {getAccountIcon(tx.accountType || 'bank')}
+                        <span>{ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}</span>
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteTransaction(tx.id)}
+                      className="text-red-500 font-medium flex items-center gap-1 hover:text-red-700"
+                    >
+                      <Trash2 size={14} /> Vymazať
+                    </button>
+                  </div>
+                </div>
+              ))
+          )}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-gray-50 text-gray-600 text-sm border-b border-gray-100">
@@ -676,7 +731,7 @@ const App: React.FC = () => {
                           onClick={() => handleDeleteTransaction(tx.id)}
                           className="text-gray-400 hover:text-red-500 transition-colors"
                         >
-                          <TrendingDown size={16} className="transform rotate-45" /> {/* Using generic icon as X */}
+                          <Trash2 size={16} />
                         </button>
                       </td>
                     </tr>
