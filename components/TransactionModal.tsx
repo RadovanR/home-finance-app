@@ -45,6 +45,17 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
     }
   }, [isOpen, initialData, categories]);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
