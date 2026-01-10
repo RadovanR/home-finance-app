@@ -580,7 +580,7 @@ const App: React.FC = () => {
         </div>
         <div className="cursor-pointer" onClick={() => openBreakdown('balance')}>
           <StatCard
-            title="Zostatok na konci mesiaca"
+            title="Aktuálny zostatok na účte"
             amount={filteredTransactions.length > 0 ? historicalBalance : 0}
             icon={<Wallet className="text-indigo-600" />}
             colorClass="bg-indigo-100 hover:bg-indigo-200 transition-colors"
