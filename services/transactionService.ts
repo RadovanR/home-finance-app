@@ -127,3 +127,20 @@ export const upsertBudget = async (budget: Budget): Promise<Budget | null> => {
         month: data.month,
     };
 };
+
+export const updateTransaction = async (tx: Transaction): Promise<Transaction | null> => {
+    const dbRow = mapTransactionToDB(tx);
+    const { data, error } = await supabase
+        .from('transactions')
+        .update(dbRow)
+        .eq('id', tx.id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating transaction:', error);
+        return null;
+    }
+
+    return mapTransactionFromDB(data);
+};

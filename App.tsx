@@ -16,7 +16,8 @@ import {
   Trash2,
   CreditCard,
   Banknote,
-  Ticket
+  Ticket,
+  Pencil
 } from 'lucide-react';
 import {
   format,
@@ -47,7 +48,8 @@ import {
   deleteTransaction,
   fetchBudget,
   upsertBudget,
-  deleteTransactionsByMonth
+  deleteTransactionsByMonth,
+  updateTransaction
 } from './services/transactionService';
 
 // --- Helper Components within App.tsx for Simplicity ---
@@ -95,6 +97,7 @@ const App: React.FC = () => {
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   // Generic Breakdown Modal State
   const [breakdownData, setBreakdownData] = useState<{
@@ -286,13 +289,40 @@ const App: React.FC = () => {
   };
 
   // --- Handlers ---
-  const handleAddTransaction = async (newTx: Omit<Transaction, 'id'>) => {
-    const savedTx = await addTransaction(newTx);
-    if (savedTx) {
-      setTransactions(prev => [savedTx, ...prev]);
+  const handleSaveTransaction = async (txData: Omit<Transaction, 'id'>) => {
+    if (editingTransaction) {
+      // Update existing
+      const updatedTx = { ...editingTransaction, ...txData };
+      const saved = await updateTransaction(updatedTx);
+      if (saved) {
+        // Optimistic update or wait for realtime. Since realtime is on, we can just close.
+        setIsModalOpen(false);
+        setEditingTransaction(null);
+      } else {
+        alert('Chyba pri úprave transakcie.');
+      }
     } else {
-      alert('Chyba pri ukladaní transakcie.');
+      // Create new
+      const savedTx = await addTransaction(txData);
+      if (savedTx) {
+        // Realtime will catch it, but good to close modal
+        // setTransactions handled by realtime subscription now?
+        // Yes, but let's leave it compatible if subscription delays.
+        // Actually duplicate keys might happen if we manual set + subscription set.
+        // Safest to rely on Subscription OR check ID.
+        // Subscription replaces whole list in current impl: fetchTransactions().then(setTransactions).
+        // So no manual set needed here if subscription is active.
+        // But to be safe and responsive:
+      } else {
+        alert('Chyba pri ukladaní transakcie.');
+      }
     }
+    setIsModalOpen(false);
+  };
+
+  const handleEditTransaction = (tx: Transaction) => {
+    setEditingTransaction(tx);
+    setIsModalOpen(true);
   };
 
   const handleDeleteTransaction = async (id: string) => {
@@ -517,6 +547,22 @@ const App: React.FC = () => {
               <span className={`font-bold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
                 {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)} €
               </span>
+              <div className="flex pl-4">
+                <button
+                  onClick={() => handleEditTransaction(tx)}
+                  className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
+                  title="Upraviť"
+                >
+                  <Pencil size={18} />
+                </button>
+                <button
+                  onClick={() => handleDeleteTransaction(tx.id)}
+                  className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors"
+                  title="Vymazať"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
             </div>
           ))}
           {filteredTransactions.length === 0 && (
@@ -669,12 +715,20 @@ const App: React.FC = () => {
                         <span>{ACCOUNT_TYPE_LABELS[tx.accountType || 'bank']}</span>
                       </span>
                     </div>
-                    <button
-                      onClick={() => handleDeleteTransaction(tx.id)}
-                      className="text-red-500 font-medium flex items-center gap-1 hover:text-red-700"
-                    >
-                      <Trash2 size={14} /> Vymazať
-                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleEditTransaction(tx)}
+                        className="text-indigo-600 font-medium flex items-center gap-1 hover:text-indigo-800"
+                      >
+                        <Pencil size={14} /> Upraviť
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTransaction(tx.id)}
+                        className="text-red-500 font-medium flex items-center gap-1 hover:text-red-700"
+                      >
+                        <Trash2 size={14} /> Vymazať
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -727,12 +781,22 @@ const App: React.FC = () => {
                         {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)} €
                       </td>
                       <td className="p-4 text-center">
-                        <button
-                          onClick={() => handleDeleteTransaction(tx.id)}
-                          className="text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => handleEditTransaction(tx)}
+                            className="text-gray-400 hover:text-indigo-600 transition-colors"
+                            title="Upraviť"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTransaction(tx.id)}
+                            className="text-gray-400 hover:text-red-500 transition-colors"
+                            title="Vymazať"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -905,7 +969,10 @@ const App: React.FC = () => {
 
       {/* FAB Desktop */}
       <button
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => {
+          setEditingTransaction(null);
+          setIsModalOpen(true);
+        }}
         className="hidden md:flex fixed bottom-8 right-8 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg transition-transform hover:scale-105 items-center gap-2 group z-30"
       >
         <Plus size={24} />
@@ -916,8 +983,12 @@ const App: React.FC = () => {
 
       <TransactionModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleAddTransaction}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingTransaction(null);
+        }}
+        onSave={handleSaveTransaction}
+        initialData={editingTransaction}
       />
 
       <DayDetailModal

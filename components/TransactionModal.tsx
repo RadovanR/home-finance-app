@@ -7,9 +7,10 @@ interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (transaction: Omit<Transaction, 'id'>) => void;
+  initialData?: Transaction | null;
 }
 
-export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, onSave }) => {
+export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [voucherCount, setVoucherCount] = useState('');
@@ -18,6 +19,31 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   const [description, setDescription] = useState('');
   const [person, setPerson] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      if (initialData) {
+        setType(initialData.type);
+        setAmount(initialData.amount.toString());
+        setCategory(initialData.category);
+        setAccountType(initialData.accountType);
+        setDescription(initialData.description);
+        setPerson(initialData.person);
+        setDate(initialData.date);
+        setVoucherCount(''); // Reset unless we calculate it back, but usually simple amount is enough
+      } else {
+        // Reset defaults
+        setType('expense');
+        setAmount('');
+        setVoucherCount('');
+        setCategory(Category.FOOD);
+        setAccountType('bank');
+        setDescription('');
+        setPerson('');
+        setDate(new Date().toISOString().split('T')[0]);
+      }
+    }
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
@@ -43,7 +69,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-fade-in">
         <div className="flex justify-between items-center p-4 border-b border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800">Pridať transakciu</h2>
+          <h2 className="text-xl font-bold text-gray-800">{initialData ? 'Upraviť transakciu' : 'Pridať transakciu'}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X size={24} />
           </button>
@@ -197,7 +223,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
             type="submit"
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition-colors mt-2"
           >
-            Uložiť transakciu
+            {initialData ? 'Upraviť transakciu' : 'Uložiť transakciu'}
           </button>
         </form>
       </div>
