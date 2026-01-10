@@ -104,6 +104,7 @@ const App: React.FC = () => {
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAppSettingsOpen, setIsAppSettingsOpen] = useState(false);
+  const [isAppSettingsClosing, setIsAppSettingsClosing] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   // Generic Breakdown Modal State
@@ -368,6 +369,17 @@ const App: React.FC = () => {
     const result = await getFinancialPrediction(transactions, format(currentDate, 'yyyy-MM'));
     setPrediction(result);
     setIsPredicting(false);
+  };
+
+  const handleCloseAppSettings = () => {
+    setIsAppSettingsClosing(true);
+  };
+
+  const handleAnimationEndAppSettings = () => {
+    if (isAppSettingsClosing) {
+      setIsAppSettingsOpen(false);
+      setIsAppSettingsClosing(false);
+    }
   };
 
   const handleResetData = async () => {
@@ -1044,22 +1056,40 @@ const App: React.FC = () => {
       />
 
       {/* App Settings Menu Modal (Mobile) */}
-      {isAppSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
+      {(isAppSettingsOpen || isAppSettingsClosing) && (
+        <div
+          className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-50 p-4 transition-opacity duration-300 ${isAppSettingsClosing ? 'opacity-0' : 'opacity-100'}`}
+          onClick={handleCloseAppSettings} // Close on backdrop click
+        >
+          <div
+            className={`bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col ${isAppSettingsClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+            onClick={(e) => e.stopPropagation()} // Prevent close on content click
+            onAnimationEnd={handleAnimationEndAppSettings}
+          >
             <div className="flex justify-between items-center p-4 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                 <Settings size={20} className="text-gray-600" />
                 Nastavenia
               </h2>
-              <button onClick={() => setIsAppSettingsOpen(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={handleCloseAppSettings} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
               </button>
             </div>
             <div className="p-2 space-y-1">
               <button
                 onClick={() => {
+                  handleCloseAppSettings();
+                  // Need to wait for animation or just close immediately?
+                  // If we close with animation, the other modal might pop up while this is sliding down.
+                  // Better: Close immediately for tab switching to feel snappy, BUT user wants "zroluje dole".
+                  // If we click an item, maybe we don't need "roll down", but just transition?
+                  // User said: "Ked kliknem na Xko, tak sa zroluje".
+                  // Usually selecting an item implies closing.
+                  // I'll use immediate switch for actions to avoid clunky UI overlap, or fast layout switch.
+                  // But for "X", definitely slide down.
+                  // Let's use simple close for actions to be snappy.
                   setIsAppSettingsOpen(false);
+                  setIsAppSettingsClosing(false);
                   setIsSettingsOpen(true);
                 }}
                 className="w-full flex items-center p-4 rounded-xl hover:bg-gray-50 transition-colors text-left gap-3"
@@ -1077,6 +1107,7 @@ const App: React.FC = () => {
               <button
                 onClick={() => {
                   setIsAppSettingsOpen(false);
+                  setIsAppSettingsClosing(false);
                   setActiveTab('prediction');
                 }}
                 className="w-full flex items-center p-4 rounded-xl hover:bg-gray-50 transition-colors text-left gap-3"
@@ -1095,8 +1126,10 @@ const App: React.FC = () => {
 
               <button
                 onClick={() => {
-                  setIsAppSettingsOpen(false);
-                  handleResetData();
+                  handleCloseAppSettings(); // Here we can animate close because confirm dialog appears separately or we just close.
+                  // Actually handleResetData shows confirm.
+                  // Let's close menu first nicely.
+                  setTimeout(handleResetData, 300); // Wait for slide down
                 }}
                 className="w-full flex items-center p-4 rounded-xl hover:bg-rose-50 transition-colors text-left gap-3 group"
               >
