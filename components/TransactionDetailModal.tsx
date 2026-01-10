@@ -53,11 +53,13 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
         <div className="p-6 space-y-6">
           {/* Amount Section */}
           <div className="text-center">
-            <span className={`text-4xl font-bold block mb-1 ${transaction.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {transaction.type === 'income' ? '+' : '-'}{transaction.amount.toFixed(2)} €
+            <span className={`text-4xl font-bold block mb-1 ${transaction.type === 'income' ? 'text-emerald-600' :
+                transaction.type === 'carryover' ? 'text-indigo-600' : 'text-rose-600'
+              }`}>
+              {transaction.type === 'income' || transaction.type === 'carryover' ? '+' : '-'}{transaction.amount.toFixed(2)} €
             </span>
             <span className="text-sm text-gray-500 uppercase tracking-wider font-semibold">
-              {transaction.type === 'income' ? 'Príjem' : 'Výdavok'}
+              {transaction.type === 'income' ? 'Príjem' : transaction.type === 'carryover' ? 'Zostatok z minula' : 'Výdavok'}
             </span>
           </div>
 

@@ -251,11 +251,15 @@ const App: React.FC = () => {
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
+  const totalCarryover = filteredTransactions
+    .filter(t => t.type === 'carryover')
+    .reduce((sum, t) => sum + t.amount, 0);
+
   const budgetableExpense = filteredTransactions
     .filter(t => t.type === 'expense' && t.category !== Category.SAVINGS && t.category !== Category.ADVANCE)
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const balance = totalIncome - totalExpense;
+  const balance = totalIncome + totalCarryover - totalExpense;
   const budgetProgress = (budgetableExpense / budget.amount) * 100;
 
   const categoryData = useMemo(() => {
@@ -277,7 +281,7 @@ const App: React.FC = () => {
     };
     transactions.forEach(t => {
       const type = t.accountType || 'bank';
-      if (t.type === 'income') {
+      if (t.type === 'income' || t.type === 'carryover') {
         balances[type as keyof typeof balances] += t.amount;
       } else {
         balances[type as keyof typeof balances] -= t.amount;
@@ -457,6 +461,44 @@ const App: React.FC = () => {
     }
   };
 
+  // --- Carryover Logic ---
+  const previousMonthDate = subMonths(currentDate, 1);
+  const previousMonthTransactions = transactions.filter(t => isSameMonth(parseISO(t.date), previousMonthDate));
+
+  const prevIncome = previousMonthTransactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const prevExpense = previousMonthTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const prevCarryover = previousMonthTransactions
+    .filter(t => t.type === 'carryover')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const previousMonthBalance = prevIncome + prevCarryover - prevExpense;
+
+  const hasCurrentCarryover = filteredTransactions.some(t => t.type === 'carryover');
+
+  const handleCarryOver = async () => {
+    if (previousMonthBalance <= 0) return;
+
+    const newTx: Omit<Transaction, 'id'> = {
+      amount: previousMonthBalance,
+      type: 'carryover',
+      category: Category.BALANCE,
+      description: `Zostatok z ${MONTH_NAMES_SK[previousMonthDate.getMonth()]}`,
+      date: format(startOfMonth(currentDate), 'yyyy-MM-dd'),
+      accountType: 'bank' // Default to bank, or we could ask user or split it.
+    };
+
+    const saved = await addTransaction(newTx);
+    if (!saved) {
+      alert('Chyba pri prenose zostatku.');
+    }
+  };
+
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
@@ -486,6 +528,22 @@ const App: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Carryover Banner */}
+      {!hasCurrentCarryover && previousMonthBalance > 0 && (
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 text-white flex items-center justify-between shadow-md mb-6">
+          <div>
+            <p className="text-indigo-100 text-sm font-medium mb-1">Zostatok z minulého mesiaca</p>
+            <p className="text-2xl font-bold">{previousMonthBalance.toFixed(2)} €</p>
+          </div>
+          <button
+            onClick={handleCarryOver}
+            className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-indigo-50 transition-colors shadow-sm"
+          >
+            Preniesť
+          </button>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
@@ -573,6 +631,7 @@ const App: React.FC = () => {
                     dataKey="value"
                   >
                     {categoryData.map((entry, index) => {
+                      // Handle carryover visual in pie chart? No, it's income-like (source), not expense.
                       const cat = categories.find(c => c.name === entry.name);
                       return <Cell key={`cell-${index}`} fill={cat?.color || CATEGORY_COLORS[entry.name] || '#ccc'} />;
                     })}
@@ -630,8 +689,10 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:gap-4 ml-auto flex-shrink-0">
-                <span className={`font-bold text-right whitespace-nowrap ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)} €
+                <span className={`font-bold text-right whitespace-nowrap ${tx.type === 'income' ? 'text-emerald-600' :
+                  tx.type === 'carryover' ? 'text-indigo-600' : 'text-rose-600'
+                  }`}>
+                  {tx.type === 'income' || tx.type === 'carryover' ? '+' : '-'}{tx.amount.toFixed(2)} €
                 </span>
                 <ChevronRight size={18} className="text-gray-300" />
               </div>
@@ -703,6 +764,7 @@ const App: React.FC = () => {
               const dayTxs = transactions.filter(t => t.date === dayStr);
               const dayExpense = dayTxs.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
               const dayIncome = dayTxs.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+              const dayCarryover = dayTxs.filter(t => t.type === 'carryover').reduce((sum, t) => sum + t.amount, 0);
 
               return (
                 <div
@@ -718,6 +780,11 @@ const App: React.FC = () => {
                     {dayIncome > 0 && (
                       <div className="text-xs bg-emerald-100 text-emerald-700 px-1 rounded truncate">
                         +{dayIncome}
+                      </div>
+                    )}
+                    {dayCarryover > 0 && (
+                      <div className="text-xs bg-indigo-100 text-indigo-700 px-1 rounded truncate">
+                        +{dayCarryover}
                       </div>
                     )}
                     {dayExpense > 0 && (
@@ -775,8 +842,10 @@ const App: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <span className={`font-bold block text-lg ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)} €
+                      <span className={`font-bold block text-lg ${tx.type === 'income' ? 'text-emerald-600' :
+                        tx.type === 'carryover' ? 'text-indigo-600' : 'text-rose-600'
+                        }`}>
+                        {tx.type === 'income' || tx.type === 'carryover' ? '+' : '-'}{tx.amount.toFixed(2)} €
                       </span>
                     </div>
                   </div>
@@ -835,8 +904,10 @@ const App: React.FC = () => {
                         </div>
                       </td>
                       <td className="p-4 text-sm text-gray-700">{tx.description}</td>
-                      <td className={`p-4 text-sm font-bold text-right ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)} €
+                      <td className={`p-4 text-sm font-bold text-right ${tx.type === 'income' ? 'text-emerald-600' :
+                          tx.type === 'carryover' ? 'text-indigo-600' : 'text-rose-600'
+                        }`}>
+                        {tx.type === 'income' || tx.type === 'carryover' ? '+' : '-'}{tx.amount.toFixed(2)} €
                       </td>
                       <td className="p-4 text-center">
                         <div className="flex justify-center gap-2">

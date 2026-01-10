@@ -102,6 +102,17 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
             >
               Výdavok
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setType('carryover');
+                setCategory(Category.BALANCE);
+              }}
+              className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${type === 'carryover' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+              Zostatok
+            </button>
           </div>
 
 
@@ -178,18 +189,27 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Kategória</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-            >
-              <option value="" disabled>Vyberte kategóriu</option>
-              {categories
-                .filter(cat => cat.type === type)
-                .map((cat) => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
-                ))}
-            </select>
+            {type === 'carryover' ? (
+              <input
+                type="text"
+                value={Category.BALANCE}
+                disabled
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed outline-none"
+              />
+            ) : (
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="" disabled>Vyberte kategóriu</option>
+                {categories
+                  .filter(cat => cat.type === type)
+                  .map((cat) => (
+                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  ))}
+              </select>
+            )}
           </div>
 
           <div>

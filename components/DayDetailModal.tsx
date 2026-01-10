@@ -101,8 +101,10 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({ isOpen, onClose,
                     </div>
                   </div>
                 </div>
-                <span className={`text-lg font-bold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)} €
+                <span className={`text-lg font-bold ${tx.type === 'income' ? 'text-emerald-600' :
+                    tx.type === 'carryover' ? 'text-indigo-600' : 'text-rose-600'
+                  }`}>
+                  {tx.type === 'income' || tx.type === 'carryover' ? '+' : '-'}{tx.amount.toFixed(2)} €
                 </span>
               </div>
             ))
